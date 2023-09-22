@@ -1,6 +1,6 @@
 module Interpreter where
 
-data TokenType = INTEGER | PLUS | MINUS | EOF | WHITESPACE deriving (Show, Eq)
+data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHITESPACE deriving (Show, Eq)
 
 data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | NoTokenValue deriving (Show, Eq)
 
@@ -22,6 +22,8 @@ getTokenTypeFromChar :: Char -> TokenType
 getTokenTypeFromChar c
   | c == '+' = PLUS
   | c == '-' = MINUS
+  | c == '*' = MULTIPLICATION
+  | c == '/' = DIVISION
   | c == ' ' = WHITESPACE
   | c `elem` ['0' .. '9'] = INTEGER
   | otherwise = EOF
@@ -32,6 +34,8 @@ tokenize list@(x : xs) = case getTokenTypeFromChar x of
   INTEGER -> Token INTEGER (TokenValueInteger $ read (takeWhile (`elem` ['0' .. '9']) list)) : tokenize (dropWhile (`elem` ['0' .. '9']) list)
   PLUS -> Token PLUS NoTokenValue : tokenize xs
   MINUS -> Token MINUS NoTokenValue : tokenize xs
+  MULTIPLICATION -> Token MULTIPLICATION NoTokenValue : tokenize xs
+  DIVISION -> Token DIVISION NoTokenValue : tokenize xs
   WHITESPACE -> tokenize xs
   EOF -> [Token EOF NoTokenValue]
 
@@ -41,6 +45,8 @@ parse (x : xs) = case getTokenType x of
   INTEGER -> case getTokenType (head xs) of
     PLUS -> extractTokenValueInteger x + parse xs
     MINUS -> extractTokenValueInteger x - parse xs
+    MULTIPLICATION -> extractTokenValueInteger x * parse xs
+    DIVISION -> extractTokenValueInteger x `div` parse xs
     _ -> extractTokenValueInteger x
   _ -> parse xs
 
