@@ -35,14 +35,14 @@ tokenize list@(x : xs) = case getTokenTypeFromChar x of
   WHITESPACE -> tokenize xs
   EOF -> [Token EOF NoTokenValue]
 
-analyzeLexically :: [Token] -> Integer
-analyzeLexically [] = 0
-analyzeLexically (x : xs) = case getTokenType x of
+parse :: [Token] -> Integer
+parse [] = 0
+parse (x : xs) = case getTokenType x of
   INTEGER -> case getTokenType (head xs) of
-    PLUS -> extractTokenValueInteger x + analyzeLexically xs
-    MINUS -> extractTokenValueInteger x - analyzeLexically xs
+    PLUS -> extractTokenValueInteger x + parse xs
+    MINUS -> extractTokenValueInteger x - parse xs
     _ -> extractTokenValueInteger x
-  _ -> analyzeLexically xs
+  _ -> parse xs
 
 interpret :: String -> Integer
-interpret = analyzeLexically . tokenize
+interpret = parse . tokenize
