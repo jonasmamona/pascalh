@@ -6,12 +6,12 @@ cabal-version: 1.12
 
 name:           pascalh
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/pascalh#readme>
-homepage:       https://github.com/githubuser/pascalh#readme
-bug-reports:    https://github.com/githubuser/pascalh/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2023 Author name here
+description:    Please see the README on GitHub at <https://github.com/jonasmamona/pascalh#readme>
+homepage:       https://github.com/jonasmamona/pascalh#readme
+bug-reports:    https://github.com/jonasmamona/pascalh/issues
+author:         Jonas
+maintainer:     jonasmpdc@gmail.com
+copyright:      2023 Jonas
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -21,11 +21,11 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/pascalh
+  location: https://github.com/jonasmamona/pascalh
 
 library
   exposed-modules:
-      Lib
+      Interpreter
   other-modules:
       Paths_pascalh
   hs-source-dirs:
