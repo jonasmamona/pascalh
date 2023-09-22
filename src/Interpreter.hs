@@ -2,7 +2,7 @@ module Interpreter where
 
 data TokenType = INTEGER | PLUS | MINUS | EOF | WHITESPACE deriving (Show, Eq)
 
-data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | TokenValueFunction | NoTokenValue deriving (Show, Eq)
+data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | NoTokenValue deriving (Show, Eq)
 
 data Token = Token {getTokenType :: TokenType, getTokenValue :: TokenValue} deriving (Show, Eq)
 
