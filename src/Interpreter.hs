@@ -6,6 +6,58 @@ data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueSt
 
 data Token = Token {getTokenType :: TokenType, getTokenValue :: TokenValue} deriving (Show, Eq)
 
+data OperationPriority = One | Two | Three deriving (Show, Eq)
+
+data BinaryOperation = BinaryOperation Token Token Token OperationPriority deriving (Eq, Show)
+
+doOperandTypesMatch :: Token -> Token -> Bool
+doOperandTypesMatch x y =
+  case getTokenType x of
+    INTEGER ->
+      case getTokenType y of
+        INTEGER -> True
+        _ -> False
+    _ -> False
+
+doOperandsMatchOperator :: Token -> Token -> Token -> Bool
+doOperandsMatchOperator x y operator =
+  case getTokenValue operator of
+    TokenValueOperation -> case getTokenType operator of
+      PLUS -> case getTokenType x of
+        INTEGER -> doOperandTypesMatch x y
+        _ -> False
+      MINUS -> case getTokenType x of
+        INTEGER -> doOperandTypesMatch x y
+        _ -> False
+      MULTIPLICATION -> case getTokenType x of
+        INTEGER -> doOperandTypesMatch x y
+        _ -> False
+      DIVISION -> case getTokenType x of
+        INTEGER -> doOperandTypesMatch x y
+        _ -> False
+      _ -> False
+    _ -> error "The provided value is not an operator"
+
+createBinaryOperation :: Token -> Token -> Token -> BinaryOperation
+createBinaryOperation x y f =
+  if doOperandsMatchOperator x y f
+    then case getTokenType f of
+      PLUS -> BinaryOperation x y f One
+      MINUS -> BinaryOperation x y f One
+      MULTIPLICATION -> BinaryOperation x y f Three
+      DIVISION -> BinaryOperation x y f Three
+      _ -> error "Unknown operation"
+    else error "Operands do not match operator"
+
+executeBinaryOperation :: BinaryOperation -> Integer
+executeBinaryOperation (BinaryOperation x y f _) =
+  case getTokenType f of
+    PLUS -> extractTokenValueInteger x + extractTokenValueInteger y
+    MINUS -> extractTokenValueInteger x + extractTokenValueInteger y
+    MULTIPLICATION -> extractTokenValueInteger x * extractTokenValueInteger y
+    DIVISION -> extractTokenValueInteger x `div` extractTokenValueInteger y
+    _ -> error "unknown operation"
+
 extractTokenValueInteger :: Token -> Integer
 extractTokenValueInteger (Token INTEGER (TokenValueInteger x)) = x
 extractTokenValueInteger _ = error "Not an integer"
@@ -28,8 +80,8 @@ getTokenTypeFromChar c
   | c `elem` ['0' .. '9'] = INTEGER
   | otherwise = EOF
 
-isCorrectOperation :: Token -> Token -> Bool
-isCorrectOperation a b = case getTokenType a of
+isAllowedSequence :: Token -> Token -> Bool
+isAllowedSequence a b = case getTokenType a of
   PLUS -> case getTokenType b of
     INTEGER -> True
     WHITESPACE -> True
@@ -70,7 +122,7 @@ validateSyntax (x : xs) = validate x xs []
     validate :: Token -> [Token] -> [Token] -> [Token]
     validate a [] acc = acc ++ [a]
     validate a (y : ys) acc =
-      if isCorrectOperation a y
+      if isAllowedSequence a y
         then validate y ys (acc ++ [a])
         else error "Syntax error - Dangling operator"
 
