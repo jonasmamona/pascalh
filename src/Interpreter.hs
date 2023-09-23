@@ -1,6 +1,6 @@
 module Interpreter where
 
-data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHITESPACE deriving (Show, Eq)
+data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHITESPACE | NOOP deriving (Show, Eq)
 
 data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | NoTokenValue deriving (Show, Eq)
 
@@ -28,6 +28,31 @@ getTokenTypeFromChar c
   | c `elem` ['0' .. '9'] = INTEGER
   | otherwise = EOF
 
+isCorrectOperation :: Token -> Token -> Bool
+isCorrectOperation a b = case getTokenType a of
+  PLUS -> case getTokenType b of
+    INTEGER -> True
+    WHITESPACE -> True
+    _ -> False
+  MINUS -> case getTokenType b of
+    INTEGER -> True
+    WHITESPACE -> True
+    _ -> False
+  MULTIPLICATION -> case getTokenType b of
+    INTEGER -> True
+    WHITESPACE -> True
+    _ -> False
+  DIVISION -> case getTokenType b of
+    INTEGER -> True
+    WHITESPACE -> True
+    _ -> False
+  INTEGER -> case getTokenType b of
+    INTEGER -> False
+    _ -> True
+  EOF -> False
+  WHITESPACE -> True
+  NOOP -> True
+
 tokenize :: String -> [Token]
 tokenize [] = [Token EOF NoTokenValue]
 tokenize list@(x : xs) = case getTokenTypeFromChar x of
@@ -37,7 +62,25 @@ tokenize list@(x : xs) = case getTokenTypeFromChar x of
   MULTIPLICATION -> Token MULTIPLICATION NoTokenValue : tokenize xs
   DIVISION -> Token DIVISION NoTokenValue : tokenize xs
   WHITESPACE -> tokenize xs
+  NOOP -> tokenize xs
   EOF -> [Token EOF NoTokenValue]
+
+removeNOOPTokens :: [Token] -> [Token]
+removeNOOPTokens = foldr (\x acc -> if getTokenType x /= NOOP then x : acc else acc) []
+
+validateTokens :: [Token] -> [Token]
+validateTokens [] = [Token EOF NoTokenValue]
+validateTokens (x : xs) = validate x (Token NOOP NoTokenValue) xs []
+  where
+    validate :: Token -> Token -> [Token] -> [Token] -> [Token]
+    validate a b [] acc = if isCorrectOperation a b then acc ++ [a] ++ [b] else error "Syntax error - Dangling operator"
+    validate a b (y : ys) acc =
+      if isCorrectOperation a b
+        then validate b y ys (acc ++ [a])
+        else error "Syntax error - Dangling operator"
+
+validateSyntax :: [Token] -> [Token]
+validateSyntax = removeNOOPTokens . validateTokens
 
 parse :: [Token] -> Integer
 parse [] = 0
@@ -51,4 +94,7 @@ parse (x : xs) = case getTokenType x of
   _ -> parse xs
 
 interpret :: String -> Integer
-interpret = parse . tokenize
+interpret = parse . validateSyntax . tokenize
+
+sampleString :: String
+sampleString = "1 + 2 + 3"
