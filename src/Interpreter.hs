@@ -1,8 +1,8 @@
 module Interpreter where
 
-data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHITESPACE | NOOP deriving (Show, Eq)
+data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHITESPACE deriving (Show, Eq)
 
-data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | NoTokenValue deriving (Show, Eq)
+data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | TokenValueOperation | NoTokenValue deriving (Show, Eq)
 
 data Token = Token {getTokenType :: TokenType, getTokenValue :: TokenValue} deriving (Show, Eq)
 
@@ -51,36 +51,28 @@ isCorrectOperation a b = case getTokenType a of
     _ -> True
   EOF -> False
   WHITESPACE -> True
-  NOOP -> True
 
 tokenize :: String -> [Token]
 tokenize [] = [Token EOF NoTokenValue]
 tokenize list@(x : xs) = case getTokenTypeFromChar x of
   INTEGER -> Token INTEGER (TokenValueInteger $ read (takeWhile (`elem` ['0' .. '9']) list)) : tokenize (dropWhile (`elem` ['0' .. '9']) list)
-  PLUS -> Token PLUS NoTokenValue : tokenize xs
-  MINUS -> Token MINUS NoTokenValue : tokenize xs
-  MULTIPLICATION -> Token MULTIPLICATION NoTokenValue : tokenize xs
-  DIVISION -> Token DIVISION NoTokenValue : tokenize xs
+  PLUS -> Token PLUS TokenValueOperation : tokenize xs
+  MINUS -> Token MINUS TokenValueOperation : tokenize xs
+  MULTIPLICATION -> Token MULTIPLICATION TokenValueOperation : tokenize xs
+  DIVISION -> Token DIVISION TokenValueOperation : tokenize xs
   WHITESPACE -> tokenize xs
-  NOOP -> tokenize xs
   EOF -> [Token EOF NoTokenValue]
 
-removeNOOPTokens :: [Token] -> [Token]
-removeNOOPTokens = foldr (\x acc -> if getTokenType x /= NOOP then x : acc else acc) []
-
-validateTokens :: [Token] -> [Token]
-validateTokens [] = [Token EOF NoTokenValue]
-validateTokens (x : xs) = validate x (Token NOOP NoTokenValue) xs []
-  where
-    validate :: Token -> Token -> [Token] -> [Token] -> [Token]
-    validate a b [] acc = if isCorrectOperation a b then acc ++ [a] ++ [b] else error "Syntax error - Dangling operator"
-    validate a b (y : ys) acc =
-      if isCorrectOperation a b
-        then validate b y ys (acc ++ [a])
-        else error "Syntax error - Dangling operator"
-
 validateSyntax :: [Token] -> [Token]
-validateSyntax = removeNOOPTokens . validateTokens
+validateSyntax [] = [Token EOF NoTokenValue]
+validateSyntax (x : xs) = validate x xs []
+  where
+    validate :: Token -> [Token] -> [Token] -> [Token]
+    validate a [] acc = acc ++ [a]
+    validate a (y : ys) acc =
+      if isCorrectOperation a y
+        then validate y ys (acc ++ [a])
+        else error "Syntax error - Dangling operator"
 
 parse :: [Token] -> Integer
 parse [] = 0
@@ -97,4 +89,4 @@ interpret :: String -> Integer
 interpret = parse . validateSyntax . tokenize
 
 sampleString :: String
-sampleString = "1 + 2 + 3"
+sampleString = "7 - 3 + 2 - 1"
