@@ -126,19 +126,23 @@ validateSyntax (x : xs) = validate x xs []
         then validate y ys (acc ++ [a])
         else error "Syntax error - Dangling operator"
 
-parse :: [Token] -> Integer
-parse [] = 0
+parse :: [Token] -> [BinaryOperation]
+parse [] = []
 parse (x : xs) = case getTokenType x of
   INTEGER -> case getTokenType (head xs) of
-    PLUS -> extractTokenValueInteger x + parse xs
-    MINUS -> extractTokenValueInteger x - parse xs
-    MULTIPLICATION -> extractTokenValueInteger x * parse xs
-    DIVISION -> extractTokenValueInteger x `div` parse xs
-    _ -> extractTokenValueInteger x
+    PLUS -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
+    MINUS -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
+    MULTIPLICATION -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
+    DIVISION -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
+    _ -> parse xs
   _ -> parse xs
-
-interpret :: String -> Integer
-interpret = parse . validateSyntax . tokenize
+  where
+    operator = head xs
+    secondOperand = head $ tail $ take 2 xs
+    listStartingFromNextValue = drop 1 xs
 
 sampleString :: String
 sampleString = "7 - 3 + 2 - 1"
+
+myList :: [Token]
+myList = validateSyntax $ tokenize sampleString
