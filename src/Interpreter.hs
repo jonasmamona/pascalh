@@ -4,11 +4,40 @@ data TokenType = INTEGER | PLUS | MINUS | DIVISION | MULTIPLICATION | EOF | WHIT
 
 data TokenValue = TokenValueInteger Integer | TokenValueChar Char | TokenValueString String | TokenValueOperation | NoTokenValue deriving (Show, Eq)
 
-data Token = Token {getTokenType :: TokenType, getTokenValue :: TokenValue} deriving (Show, Eq)
+data Token = Token {getTokenType :: TokenType, getTokenValue :: TokenValue} deriving Show
 
-data OperationPriority = One | Two | Three deriving (Show, Eq)
+instance Eq Token where
+  (Token a b) == (Token c d) = a == c && b == d
 
-data BinaryOperation = BinaryOperation Token Token Token OperationPriority deriving (Eq, Show)
+data OperationPriority = One | Two | Three deriving Show
+
+instance Eq OperationPriority where
+  One == One = True
+  One == _ = False
+  Two == Two = True
+  Two == _ = False
+  Three == Three = True
+  Three == _ = False
+
+instance Ord OperationPriority where
+  compare One One = EQ
+  compare One _ = LT
+  compare Two One = GT
+  compare Two Two = EQ
+  compare Two Three = LT
+  compare Three _ = GT
+
+data Operation = Operation {getOperationValue :: Token, getOperationPriority :: OperationPriority} deriving  Show
+
+data OperationLinkedList = OperationLinkedList {getValue :: Token, getOperation :: Operation, getNextOperation :: OperationLinkedList} | EmptyOperationLinkedList deriving Show
+
+insertOperationByPriority :: OperationLinkedList -> Token -> Operation -> OperationLinkedList
+insertOperationByPriority EmptyOperationLinkedList value operation =
+  OperationLinkedList value operation EmptyOperationLinkedList
+insertOperationByPriority (OperationLinkedList value operation next) newValue newOperation =
+  if getOperationPriority operation >= getOperationPriority newOperation
+    then OperationLinkedList value operation (insertOperationByPriority next newValue newOperation)
+    else OperationLinkedList newValue newOperation (OperationLinkedList value operation next)
 
 doOperandTypesMatch :: Token -> Token -> Bool
 doOperandTypesMatch x y =
@@ -37,26 +66,6 @@ doOperandsMatchOperator x y operator =
         _ -> False
       _ -> False
     _ -> error "The provided value is not an operator"
-
-createBinaryOperation :: Token -> Token -> Token -> BinaryOperation
-createBinaryOperation x y f =
-  if doOperandsMatchOperator x y f
-    then case getTokenType f of
-      PLUS -> BinaryOperation x y f One
-      MINUS -> BinaryOperation x y f One
-      MULTIPLICATION -> BinaryOperation x y f Three
-      DIVISION -> BinaryOperation x y f Three
-      _ -> error "Unknown operation"
-    else error "Operands do not match operator"
-
-executeBinaryOperation :: BinaryOperation -> Integer
-executeBinaryOperation (BinaryOperation x y f _) =
-  case getTokenType f of
-    PLUS -> extractTokenValueInteger x + extractTokenValueInteger y
-    MINUS -> extractTokenValueInteger x + extractTokenValueInteger y
-    MULTIPLICATION -> extractTokenValueInteger x * extractTokenValueInteger y
-    DIVISION -> extractTokenValueInteger x `div` extractTokenValueInteger y
-    _ -> error "unknown operation"
 
 extractTokenValueInteger :: Token -> Integer
 extractTokenValueInteger (Token INTEGER (TokenValueInteger x)) = x
@@ -126,23 +135,20 @@ validateSyntax (x : xs) = validate x xs []
         then validate y ys (acc ++ [a])
         else error "Syntax error - Dangling operator"
 
-parse :: [Token] -> [BinaryOperation]
-parse [] = []
+parse :: [Token] -> OperationLinkedList
+parse [] = EmptyOperationLinkedList
 parse (x : xs) = case getTokenType x of
-  INTEGER -> case getTokenType (head xs) of
-    PLUS -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
-    MINUS -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
-    MULTIPLICATION -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
-    DIVISION -> createBinaryOperation x secondOperand operator : parse listStartingFromNextValue
-    _ -> parse xs
+  INTEGER -> 
+    case getTokenType (head xs) of
+      PLUS -> insertOperationByPriority (parse xs) x (Operation (head xs) One)
+      MINUS -> insertOperationByPriority (parse xs) x (Operation (head xs) One)
+      MULTIPLICATION -> insertOperationByPriority (parse xs) x (Operation (head xs) Two)
+      DIVISION -> insertOperationByPriority (parse xs) x (Operation (head xs) Two)
+      _ -> insertOperationByPriority EmptyOperationLinkedList x (Operation (head xs) One)
   _ -> parse xs
-  where
-    operator = head xs
-    secondOperand = head $ tail $ take 2 xs
-    listStartingFromNextValue = drop 1 xs
 
 sampleString :: String
-sampleString = "7 - 3 + 2 - 1"
+sampleString = "7 * 3 + 2 - 1"
 
 myList :: [Token]
 myList = validateSyntax $ tokenize sampleString
